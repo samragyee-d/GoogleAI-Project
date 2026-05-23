@@ -1,0 +1,1 @@
+This project is for a hackathon. Helps users plan their trips to different WC games.
