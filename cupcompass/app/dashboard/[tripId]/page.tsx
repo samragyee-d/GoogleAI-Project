@@ -9,9 +9,11 @@ async function getTrip(tripId: string) {
 export default async function Dashboard({
   params,
 }: {
-  params: { tripId: string };
+  params: Promise<{ tripId: string }>;
 }) {
-  const data = await getTrip(params.tripId);
+  const { tripId } = await params;
+
+  const data = await getTrip(tripId);
 
   return (
     <main className="p-8">
@@ -19,6 +21,7 @@ export default async function Dashboard({
 
       <section className="mt-8">
         <h2 className="text-xl font-bold">Trip Info</h2>
+        <p>Trip ID: {tripId}</p>
         <p>Fan Type: {data.trip?.fanType}</p>
         <p>Team: {data.trip?.preferredTeam}</p>
         <p>Budget: ${data.trip?.budget}</p>
