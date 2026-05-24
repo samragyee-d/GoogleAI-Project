@@ -3,9 +3,10 @@ import { NextResponse } from "next/server";
 export async function POST(req: Request) {
   const body = await req.json();
 
-  console.log("Created trip:", body);
+  console.log("Trip created:", body);
 
   return NextResponse.json({
-    tripId: "demo-trip-1"
+    success: true,
+    tripId: "demo-trip-1",
   });
 }
