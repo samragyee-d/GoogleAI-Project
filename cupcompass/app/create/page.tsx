@@ -13,7 +13,7 @@ export default function CreateJourney() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    await fetch("/api/trips", {
+    const res = await fetch("/api/trips", {
       method: "POST",
       body: JSON.stringify({
         fanType,
@@ -22,7 +22,11 @@ export default function CreateJourney() {
       }),
     });
 
-    router.push("/dashboard");
+    const data = await res.json();
+
+    console.log(data);
+
+    router.push(`/dashboard/${data.tripId}`);
   }
 
   return (
