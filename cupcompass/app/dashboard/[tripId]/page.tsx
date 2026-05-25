@@ -1,3 +1,5 @@
+
+import SimulationButtons from "@/components/SimulationButtons";
 async function getTrip(tripId: string) {
   const res = await fetch(`http://localhost:3000/api/trips/${tripId}`, {
     cache: "no-store",
@@ -53,6 +55,7 @@ export default async function Dashboard({
           ))}
         </ul>
       </section>
+      <SimulationButtons tripId={tripId} />
     </main>
   );
 }
