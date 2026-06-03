@@ -154,3 +154,50 @@ Rules:
     return fallbackDecision(eventType);
   }
 }
+
+export async function processEvent({
+  trip,
+  itinerary,
+  eventType,
+  tripId,
+}: {
+  trip?: any;
+  itinerary?: any[];
+  eventType: string;
+  tripId?: string;
+}) {
+  // If an Agent Builder endpoint is configured, prefer that. The endpoint
+  // should accept JSON { tripId, trip, itinerary, eventType } and return
+  // a JSON object with the same shape as decideAgentActions (i.e. { actions: [...] }).
+  const agentBuilderUrl = process.env.AGENT_BUILDER_ENDPOINT;
+  const apiKey = process.env.AGENT_BUILDER_KEY;
+
+  if (agentBuilderUrl) {
+    try {
+      const res = await fetch(agentBuilderUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+        },
+        body: JSON.stringify({ tripId, trip, itinerary, eventType }),
+      });
+
+      if (!res.ok) {
+        console.error("Agent Builder request failed", res.status, await res.text());
+        throw new Error("Agent Builder request failed");
+      }
+
+      const data = await res.json();
+
+      // If Agent Builder returns a top-level `decision` object, use it.
+      return data.decision || data;
+    } catch (err) {
+      console.error("Agent Builder call failed, falling back to local logic:", err);
+      return decideAgentActions({ trip: trip || {}, itinerary: itinerary || [], eventType });
+    }
+  }
+
+  // No Agent Builder configured — use local Gemini logic (existing flow).
+  return decideAgentActions({ trip: trip || {}, itinerary: itinerary || [], eventType });
+}

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
-import { decideAgentActions } from "@/lib/agent";
+import { processEvent } from "@/lib/agent";
 
 export async function POST(req: Request) {
   try {
@@ -8,9 +8,10 @@ export async function POST(req: Request) {
 
     const db = await getDb();
 
-    await db.collection("events").insertOne({
+    const evRes = await db.collection("events").insertOne({
       tripId,
       eventType,
+      status: "new",
       createdAt: new Date(),
     });
 
@@ -29,11 +30,14 @@ export async function POST(req: Request) {
       .find({ tripId })
       .toArray();
 
-    const decision = await decideAgentActions({
+    const decision = await processEvent({
       trip,
       itinerary,
       eventType,
+      tripId,
     });
+
+    const decisionSource = decision?.decisionSource || (process.env.AGENT_BUILDER_ENDPOINT ? "AgentBuilder" : "LocalGemini");
 
     for (const action of decision.actions || []) {
       if (action.type === "replace_hotel") {
@@ -54,7 +58,8 @@ export async function POST(req: Request) {
 
         await db.collection("agent_logs").insertOne({
           tripId,
-          message: `Gemini replaced hotel in ${action.city} with ${action.newHotel}.`,
+          message: `Agent replaced hotel in ${action.city} with ${action.newHotel}.`,
+          decisionSource,
           createdAt: new Date(),
         });
       }
@@ -74,7 +79,8 @@ export async function POST(req: Request) {
 
         await db.collection("agent_logs").insertOne({
           tripId,
-          message: `Gemini added ${action.city} to the itinerary.`,
+          message: `Agent added ${action.city} to the itinerary.`,
+          decisionSource,
           createdAt: new Date(),
         });
       }
@@ -96,7 +102,8 @@ export async function POST(req: Request) {
 
         await db.collection("agent_logs").insertOne({
           tripId,
-          message: `Gemini updated the cost for ${action.city}.`,
+          message: `Agent updated the cost for ${action.city}.`,
+          decisionSource,
           createdAt: new Date(),
         });
       }
@@ -105,9 +112,20 @@ export async function POST(req: Request) {
         await db.collection("agent_logs").insertOne({
           tripId,
           message: action.message,
+          decisionSource,
           createdAt: new Date(),
         });
       }
+    }
+
+    // mark event processed
+    try {
+      await db.collection("events").updateOne(
+        { _id: evRes.insertedId },
+        { $set: { status: "processed", processedAt: new Date() } }
+      );
+    } catch (e) {
+      console.error("Failed to mark event processed", e);
     }
 
     return NextResponse.json({

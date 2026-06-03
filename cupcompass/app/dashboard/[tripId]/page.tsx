@@ -41,6 +41,7 @@ export default async function Dashboard({
               <p>Hotel: {item.hotel}</p>
               <p>Cost: ${item.cost}</p>
               <p>Status: {item.status}</p>
+                {item.agentNote ? <p className="italic">Agent note: {item.agentNote}</p> : null}
             </li>
           ))}
         </ul>
@@ -51,7 +52,10 @@ export default async function Dashboard({
 
         <ul className="mt-2">
           {data.logs?.map((log: any) => (
-            <li key={log._id}>{log.message}</li>
+            <li key={log._id}>
+              <span className="font-semibold">{log.message}</span>
+              {log.decisionSource ? <span className="ml-2 text-sm text-gray-500">({log.decisionSource})</span> : null}
+            </li>
           ))}
         </ul>
       </section>
